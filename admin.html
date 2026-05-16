@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Администратор — Scoreboard App</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Manrope',sans-serif;background:#0a0e1a;color:#e8ecf4;min-height:100vh}
+:root{--acc:#6c3ee8;--grad:linear-gradient(135deg,#6c3ee8,#a855f7);--card:#141929;--border:rgba(255,255,255,.06)}
+#authScreen{display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#0a0e1a 0%,#1a1f35 50%,#0d1b2a 100%)}
+#authScreen.hidden{display:none}
+.auth-card{background:#141929;border-radius:20px;padding:36px;width:380px;max-width:100%;border:1px solid var(--border)}
+.auth-card h1{font-size:22px;font-weight:800;margin-bottom:4px}
+.auth-card p{color:#6b7280;font-size:13px;margin-bottom:24px}
+.auth-card input{width:100%;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:#0a0e1a;color:#e8ecf4;font-family:inherit;font-size:14px;outline:none;margin-bottom:12px;transition:border .15s}
+.auth-card input:focus{border-color:var(--acc)}
+.auth-card button{width:100%;padding:12px;border-radius:10px;border:none;background:var(--grad);color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;transition:box-shadow .15s}
+.auth-card button:hover{box-shadow:0 4px 14px rgba(108,62,232,.4)}
+.auth-error{background:rgba(239,68,68,.15);color:#ef4444;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;display:none;margin-bottom:12px}
+.auth-error.show{display:block}
+
+/* ── Dashboard ── */
+#dashboard{display:none}
+#dashboard.show{display:block}
+.topbar{background:#141929;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{width:36px;height:36px;background:var(--grad);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.topbar-title{font-size:16px;font-weight:800}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.admin-badge{background:rgba(108,62,232,.2);color:var(--acc);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase}
+.topbar-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:#e8ecf4;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.topbar-btn:hover{border-color:var(--acc);color:var(--acc)}
+
+.main{padding:24px 28px;max-width:1400px;margin:0 auto}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:28px}
+.stat-card{background:#141929;border-radius:12px;padding:18px 20px;border:1px solid var(--border)}
+.stat-label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px}
+.stat-value{font-size:28px;font-weight:900;margin-top:4px}
+.stat-value.green{color:#22c55e}.stat-value.blue{color:#3b82f6}.stat-value.yellow{color:#f59e0b}.stat-value.purple{color:var(--acc)}
+
+/* Users table */
+.section-title{font-size:18px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.table-wrap{background:#141929;border-radius:12px;border:1px solid var(--border);overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:800px;font-size:13px}
+th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.role-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.role-badge.admin{background:rgba(108,62,232,.2);color:var(--acc)}
+.role-badge.user{background:rgba(107,114,128,.2);color:#9ca3af}
+.status-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.status-badge.active{background:rgba(34,197,94,.15);color:#22c55e}
+.status-badge.trial{background:rgba(245,158,11,.15);color:#f59e0b}
+.status-badge.blocked{background:rgba(239,68,68,.15);color:#ef4444}
+.status-badge.none{background:rgba(107,114,128,.15);color:#6b7280}
+.table-btn{padding:5px 12px;border-radius:6px;border:none;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+.table-btn.block{background:rgba(239,68,68,.15);color:#ef4444}
+.table-btn.block:hover{background:#ef4444;color:#fff}
+.table-btn.unblock{background:rgba(34,197,94,.15);color:#22c55e}
+.table-btn.unblock:hover{background:#22c55e;color:#fff}
+.table-btn.edit{background:rgba(59,130,246,.15);color:#3b82f6}
+.table-btn.edit:hover{background:#3b82f6;color:#fff}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:#141929;border-radius:16px;padding:28px;width:440px;max-width:95vw;border:1px solid var(--border)}
+.modal h2{font-size:18px;font-weight:800;margin-bottom:16px}
+.modal label{font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.modal select,.modal input{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:#0a0e1a;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;margin-bottom:14px}
+.modal select:focus,.modal input:focus{border-color:var(--acc)}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+.modal-btn{padding:10px 20px;border-radius:8px;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.modal-btn.primary{background:var(--grad);color:#fff}
+.modal-btn.cancel{background:transparent;color:#6b7280;border:1px solid var(--border)}
+.modal-btn.danger{background:#ef4444;color:#fff}
+.notify{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(12px);transition:all .25s}
+.notify.show{opacity:1;transform:translateY(0)}
+.notify.success{background:#22c55e;color:#fff}
+.notify.error{background:#ef4444;color:#fff}
+
+.sett-inp{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:#0a0e1a;color:#e8ecf4;font-family:inherit;font-size:14px;font-weight:700;outline:none;transition:border .15s}
+.sett-inp:focus{border-color:var(--acc)}
+@media(max-width:768px){
+  .main{padding:16px}
+  .topbar{padding:12px 16px;flex-wrap:wrap;gap:8px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="authScreen">
+  <div class="auth-card">
+    <h1>🔐 Администратор</h1>
+    <p>Вход в панель управления</p>
+    <div id="authError" class="auth-error"></div>
+    <input type="email" id="adminEmail" placeholder="Email" value="admin@admin.com">
+    <input type="password" id="adminPass" placeholder="Пароль" value="admin">
+    <button onclick="adminLogin()">Войти</button>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">🛡️</div>
+      <span class="topbar-title">Админ-панель</span>
+      <span class="admin-badge">Scoreboard App</span>
+    </div>
+    <div class="topbar-right">
+      <span id="adminName" style="font-size:13px;font-weight:600;color:#9ca3af"></span>
+      <button class="topbar-btn" onclick="openAdminPassModal()">🔑 Пароль</button>
+      <button class="topbar-btn" onclick="location.reload()">🔄</button>
+      <button class="topbar-btn" onclick="adminLogout()" style="color:#ef4444">Выйти</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="section-title">
+      Пользователи
+      <span style="font-size:12px;color:#6b7280;font-weight:600" id="userCount"></span>
+      <button class="topbar-btn" onclick="openCreateModal()" style="margin-left:auto;background:var(--grad);color:#fff;border:none;padding:6px 16px">+ Создать</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Email</th><th>Имя</th><th>Роль</th><th>Подписка</th><th>Команды</th><th>Действует до</th><th>Статус</th><th></th>
+        </tr></thead>
+        <tbody id="usersTbody"></tbody>
+      </table>
+    </div>
+    <div class="section-title" style="margin-top:36px">
+      Настройки тарифов
+      <button class="topbar-btn" onclick="saveSettings()" style="margin-left:auto;background:var(--grad);color:#fff;border:none;padding:6px 16px">💾 Сохранить</button>
+    </div>
+    <div style="background:#141929;border-radius:12px;border:1px solid var(--border);padding:24px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Пробный — макс. команд</label>
+          <input class="sett-inp" id="sett_plan_trial_max_teams" type="number" min="1" value="9999">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Пробный — дней</label>
+          <input class="sett-inp" id="sett_plan_trial_duration_days" type="number" min="1" value="7">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Базовый — цена (BYN)</label>
+          <input class="sett-inp" id="sett_plan_basic_price" type="number" min="0" step="0.01" value="22">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Базовый — макс. команд</label>
+          <input class="sett-inp" id="sett_plan_basic_max_teams" type="number" min="1" value="10">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Базовый — дней</label>
+          <input class="sett-inp" id="sett_plan_basic_duration_days" type="number" min="1" value="30">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Стандартный — цена (BYN)</label>
+          <input class="sett-inp" id="sett_plan_standard_price" type="number" min="0" step="0.01" value="33">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Стандартный — макс. команд</label>
+          <input class="sett-inp" id="sett_plan_standard_max_teams" type="number" min="1" value="30">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Стандартный — дней</label>
+          <input class="sett-inp" id="sett_plan_standard_duration_days" type="number" min="1" value="30">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Премиум — цена (BYN)</label>
+          <input class="sett-inp" id="sett_plan_premium_price" type="number" min="0" step="0.01" value="44">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Премиум — макс. команд</label>
+          <input class="sett-inp" id="sett_plan_premium_max_teams" type="number" value="9999">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Премиум — дней</label>
+          <input class="sett-inp" id="sett_plan_premium_duration_days" type="number" min="1" value="30">
+        </div>
+      </div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Скидки за период</label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">3 месяца — скидка %</label>
+            <input class="sett-inp" id="sett_discount_3_pct" type="number" min="0" max="100" value="15">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">6 месяцев — скидка %</label>
+            <input class="sett-inp" id="sett_discount_6_pct" type="number" min="0" max="100" value="25">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">12 месяцев — скидка %</label>
+            <input class="sett-inp" id="sett_discount_12_pct" type="number" min="0" max="100" value="35">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2>Редактировать подписку</h2>
+    <p style="color:#6b7280;font-size:13px;margin-bottom:14px" id="editUserInfo"></p>
+    <label>Тариф</label>
+    <select id="editPlan">
+      <option value="trial">Пробный</option>
+      <option value="basic">Базовый — 22 BYN</option>
+      <option value="standard">Стандартный — 33 BYN</option>
+      <option value="premium">Премиум — 44 BYN</option>
+    </select>
+    <label>Период</label>
+    <select id="editPeriod">
+      <option value="1">1 месяц</option>
+      <option value="3">3 месяца</option>
+      <option value="6">6 месяцев</option>
+      <option value="12">12 месяцев</option>
+    </select>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeEditModal()">Отмена</button>
+      <button class="modal-btn primary" onclick="savePlan()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Change Password Modal -->
+<div class="modal-overlay" id="adminPassModal">
+  <div class="modal">
+    <h2>Сменить пароль</h2>
+    <input type="password" id="adminCurPass" placeholder="Текущий пароль" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:#0a0e1a;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;margin-bottom:12px">
+    <input type="password" id="adminNewPass" placeholder="Новый пароль (мин. 6 символов)" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:#0a0e1a;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;margin-bottom:12px">
+    <input type="password" id="adminNewPass2" placeholder="Повторите новый пароль" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:#0a0e1a;color:#e8ecf4;font-family:inherit;font-size:13px;outline:none;margin-bottom:12px">
+    <div id="adminPassMsg" style="font-size:13px;font-weight:600;margin-bottom:12px;display:none"></div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeAdminPassModal()">Отмена</button>
+      <button class="modal-btn primary" onclick="adminChangePassword()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <h2>Создать пользователя</h2>
+    <label>Email</label>
+    <input type="email" id="createEmail" placeholder="email@example.com">
+    <label>Пароль</label>
+    <input type="password" id="createPass" placeholder="минимум 6 символов">
+    <label>Имя (необязательно)</label>
+    <input type="text" id="createName" placeholder="Имя пользователя">
+    <label>Тариф</label>
+    <select id="createPlan">
+      <option value="trial">Пробный (7 дней)</option>
+      <option value="basic">Базовый — 22 BYN/мес</option>
+      <option value="standard" selected>Стандартный — 33 BYN/мес</option>
+      <option value="premium">Премиум — 44 BYN/мес</option>
+    </select>
+    <label>Период</label>
+    <select id="createPeriod">
+      <option value="1">1 месяц</option>
+      <option value="3">3 месяца (-15%)</option>
+      <option value="6">6 месяцев (-25%)</option>
+      <option value="12">12 месяцев (-35%)</option>
+    </select>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeCreateModal()">Отмена</button>
+      <button class="modal-btn primary" onclick="createUser()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<div id="notify" class="notify"></div>
+
+<script>
+let TOKEN = localStorage.getItem('sb_admin_token');
+const API = window.location.origin;
+const planNames = { trial:'Пробный', basic:'Базовый', standard:'Стандартный', premium:'Премиум' };
+
+async function init() {
+  if (TOKEN) {
+    try {
+      const me = await apiFetch('/api/auth/me');
+      if (me.user.role === 'admin') { showDashboard(me.user); return; }
+    } catch(e) {}
+    TOKEN = null; localStorage.removeItem('sb_admin_token');
+  }
+  document.getElementById('authScreen').classList.remove('hidden');
+}
+
+async function adminLogin() {
+  const email = document.getElementById('adminEmail').value;
+  const pass = document.getElementById('adminPass').value;
+  const errEl = document.getElementById('authError');
+  try {
+    const res = await fetch(API + '/api/auth/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      TOKEN = data.token; localStorage.setItem('sb_admin_token', TOKEN);
+      if (data.user.role === 'admin') { showDashboard(data.user); }
+      else { errEl.textContent = 'У вас нет прав администратора'; errEl.classList.add('show'); }
+    } else { errEl.textContent = data.error; errEl.classList.add('show'); }
+  } catch(e) { errEl.textContent = 'Ошибка подключения'; errEl.classList.add('show'); }
+}
+
+function adminLogout() { TOKEN = null; localStorage.removeItem('sb_admin_token'); location.reload(); }
+
+function showDashboard(user) {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('dashboard').classList.add('show');
+  document.getElementById('adminName').textContent = user.name || user.email;
+  loadStats();
+  loadUsers();
+  loadSettings();
+}
+
+async function apiFetch(url, opts = {}) {
+  opts.headers = { ...opts.headers, 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' };
+  const res = await fetch(API + url, opts);
+  if (res.status === 401) { adminLogout(); return null; }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Ошибка');
+  return data;
+}
+
+async function loadStats() {
+  try {
+    const s = await apiFetch('/api/admin/stats');
+    const g = document.getElementById('statsGrid');
+    const cards = [
+      { label: 'Всего пользователей', value: s.totalUsers, cls: 'blue' },
+      { label: 'Активных подписок', value: s.activeSubs, cls: 'green' },
+      { label: 'Пробный период', value: s.trialUsers, cls: 'yellow' },
+      { label: 'Платных', value: s.paidUsers, cls: 'purple' },
+      { label: 'Заблокировано', value: s.blockedUsers, cls: '' },
+      { label: 'Выручка (месяц)', value: s.revenueMonth + ' BYN', cls: 'green' },
+      { label: 'Выручка (всего)', value: s.totalRevenue + ' BYN', cls: 'blue' },
+    ];
+    if (s.planStats) s.planStats.forEach(p => {
+      cards.push({ label: planNames[p.plan] || p.plan, value: p.count, cls: 'purple' });
+    });
+    g.innerHTML = cards.map(c => `<div class="stat-card"><div class="stat-label">${c.label}</div><div class="stat-value ${c.cls}">${c.value}</div></div>`).join('');
+  } catch(e) { notify(e.message, 'error'); }
+}
+
+async function loadUsers() {
+  try {
+    const users = await apiFetch('/api/admin/users');
+    document.getElementById('userCount').textContent = '(' + users.length + ')';
+    document.getElementById('usersTbody').innerHTML = users.map(u => {
+      const plan = u.plan || '—';
+      const planDisplay = planNames[plan] || plan;
+      const status = u.sub_status === 'active' ? (plan === 'trial' ? 'trial' : 'active') : 'none';
+      const blocked = u.blocked_until && new Date(u.blocked_until) > new Date();
+      const expDate = u.expires_at ? new Date(u.expires_at + 'Z').toLocaleDateString('ru-RU') : '—';
+      const maxTeams = u.max_teams === 999999 ? '∞' : (u.max_teams || '—');
+      return `<tr>
+        <td style="font-weight:600">${u.email}</td>
+        <td>${u.name || '—'}</td>
+        <td><span class="role-badge ${u.role}">${u.role === 'admin' ? 'Админ' : 'Пользователь'}</span></td>
+        <td><span class="status-badge ${status}">${planDisplay}</span></td>
+        <td>${maxTeams}</td>
+        <td style="color:#6b7280;font-size:12px">${expDate}</td>
+        <td>${blocked ? '<span class="status-badge blocked">Заблокирован</span>' : '<span style="color:#22c55e;font-size:12px">Активен</span>'}</td>
+        <td style="display:flex;gap:4px;">
+          <button class="table-btn edit" onclick="openEditModal('${u.id}','${u.email}')">✎</button>
+          ${blocked
+            ? `<button class="table-btn unblock" onclick="blockUser('${u.id}',false)">✓</button>`
+            : `<button class="table-btn block" onclick="blockUser('${u.id}',true)">✕</button>`
+          }
+          ${u.role === 'admin'
+            ? `<button class="table-btn" style="background:rgba(239,68,68,.15);color:#ef4444" onclick="setRole('${u.id}','user')">👤</button>`
+            : `<button class="table-btn" style="background:rgba(108,62,232,.15);color:var(--acc)" onclick="setRole('${u.id}','admin')">🛡️</button>`
+          }
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { notify(e.message, 'error'); }
+}
+
+function openAdminPassModal() { document.getElementById('adminPassModal').classList.add('open'); document.getElementById('adminPassMsg').style.display='none'; }
+function closeAdminPassModal() { document.getElementById('adminPassModal').classList.remove('open'); }
+
+async function adminChangePassword() {
+  const cur = document.getElementById('adminCurPass').value;
+  const np = document.getElementById('adminNewPass').value;
+  const np2 = document.getElementById('adminNewPass2').value;
+  const msg = document.getElementById('adminPassMsg');
+  if (!cur || !np) { msg.textContent='Заполните все поля'; msg.style.display='block'; msg.style.color='#ef4444'; return; }
+  if (np.length < 6) { msg.textContent='Пароль минимум 6 символов'; msg.style.display='block'; msg.style.color='#ef4444'; return; }
+  if (np !== np2) { msg.textContent='Пароли не совпадают'; msg.style.display='block'; msg.style.color='#ef4444'; return; }
+  try {
+    await apiFetch('/api/auth/change-password', {
+      method: 'POST', body: JSON.stringify({ currentPassword: cur, newPassword: np })
+    });
+    msg.textContent='Пароль изменён'; msg.style.display='block'; msg.style.color='#22c55e';
+    document.getElementById('adminCurPass').value=''; document.getElementById('adminNewPass').value=''; document.getElementById('adminNewPass2').value='';
+    setTimeout(closeAdminPassModal,1500);
+  } catch(e) { msg.textContent=e.message; msg.style.display='block'; msg.style.color='#ef4444'; }
+}
+
+function openCreateModal() { document.getElementById('createModal').classList.add('open'); }
+function closeCreateModal() { document.getElementById('createModal').classList.remove('open'); }
+
+async function createUser() {
+  const email = document.getElementById('createEmail').value.trim();
+  const pass = document.getElementById('createPass').value;
+  const name = document.getElementById('createName').value.trim();
+  const plan = document.getElementById('createPlan').value;
+  const period = parseInt(document.getElementById('createPeriod').value);
+  if (!email || !pass) { notify('Email и пароль обязательны', 'error'); return; }
+  if (pass.length < 6) { notify('Пароль минимум 6 символов', 'error'); return; }
+  try {
+    await apiFetch('/api/admin/create-user', { method: 'POST', body: JSON.stringify({ email, password: pass, name, plan, period_months: period }) });
+    closeCreateModal();
+    document.getElementById('createEmail').value = ''; document.getElementById('createPass').value = ''; document.getElementById('createName').value = '';
+    notify('Пользователь создан', 'success');
+    loadUsers(); loadStats();
+  } catch(e) { notify(e.message, 'error'); }
+}
+
+let editingUserId = null;
+function openEditModal(userId, email) {
+  editingUserId = userId;
+  document.getElementById('editUserInfo').textContent = email;
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEditModal() { document.getElementById('editModal').classList.remove('open'); editingUserId = null; }
+
+async function savePlan() {
+  if (!editingUserId) return;
+  const plan = document.getElementById('editPlan').value;
+  const period = parseInt(document.getElementById('editPeriod').value);
+  try {
+    await apiFetch('/api/admin/set-plan', {
+      method: 'POST', body: JSON.stringify({ userId: editingUserId, plan, period_months: period })
+    });
+    closeEditModal();
+    notify('Подписка изменена', 'success');
+    loadUsers(); loadStats();
+  } catch(e) { notify(e.message, 'error'); }
+}
+
+async function blockUser(userId, block) {
+  try {
+    await apiFetch('/api/admin/block-user', {
+      method: 'POST', body: JSON.stringify({ userId, block })
+    });
+    notify(block ? 'Пользователь заблокирован' : 'Пользователь разблокирован', 'success');
+    loadUsers(); loadStats();
+  } catch(e) { notify(e.message, 'error'); }
+}
+
+async function setRole(userId, role) {
+  const label = role === 'admin' ? 'назначить администратором' : 'снять права администратора';
+  if (!confirm('Вы уверены, что хотите ' + label + '?')) return;
+  try {
+    await apiFetch('/api/admin/set-role', {
+      method: 'POST', body: JSON.stringify({ userId, role })
+    });
+    notify('Роль изменена', 'success');
+    loadUsers();
+  } catch(e) { notify(e.message, 'error'); }
+}
+
+async function loadSettings() {
+  try {
+    const s = await apiFetch('/api/admin/settings');
+    for (const [k, v] of Object.entries(s)) {
+      const el = document.getElementById('sett_' + k);
+      if (el) el.value = v;
+    }
+  } catch(e) { notify(e.message, 'error'); }
+}
+
+async function saveSettings() {
+  const body = {};
+  document.querySelectorAll('.sett-inp').forEach(el => {
+    const key = el.id.replace('sett_', '');
+    body[key] = el.value;
+  });
+  try {
+    await apiFetch('/api/admin/settings', {
+      method: 'PUT', body: JSON.stringify(body)
+    });
+    notify('Настройки сохранены', 'success');
+  } catch(e) { notify(e.message, 'error'); }
+}
+
+let nt = null;
+function notify(msg, type) {
+  const el = document.getElementById('notify');
+  el.textContent = msg; el.className = 'notify ' + type + ' show';
+  clearTimeout(nt); nt = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+init();
+</script>
+</body>
+</html>

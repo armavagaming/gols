@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# Route /api/* to PHP backend
+RewriteRule ^api/ index.php [L,QSA,E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Deny access to databases and config
+<FilesMatch "\.(db|db-shm|db-wal|sqlite)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
