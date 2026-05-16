@@ -12,7 +12,7 @@ if (!localStorage.getItem('sb_token')) {
 }
 </script>
 <style>
-:root{--bg:#f0f2f8;--sb:#fff;--acc:#6c3ee8;--acc2:#a855f7;--grad:linear-gradient(135deg,#6c3ee8,#a855f7);--promo:linear-gradient(135deg,#7c3aed,#c026d3);--text:#1a1a2e;--muted:#6b7280;--faint:#9ca3af;--border:#e5e7eb;--hover:#f5f3ff;--link:#6c3ee8;--danger:#ef4444;--sw:260px}
+:root{--bg:#f0f2f8;--sb:#fff;--acc:#6c3ee8;--acc2:#a855f7;--grad:linear-gradient(135deg,#6c3ee8,#a855f7);--promo:linear-gradient(135deg,#7c3aed,#c026d3);--text:#1a1a2e;--muted:#6b7280;--faint:#9ca3af;--border:#e5e7eb;--hover:#f5f3ff;--link:#6c3ee8;--danger:#ef4444;--sw:300px}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px}
 
@@ -31,9 +31,7 @@ body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--text);dis
 .promo-text{font-size:13px;font-weight:700;line-height:1.4;margin-bottom:14px}
 .promo-btn{background:#fff;color:var(--acc);border:none;border-radius:10px;padding:10px 0;width:100%;font-family:inherit;font-size:13px;font-weight:800;letter-spacing:.5px;cursor:pointer;transition:box-shadow .18s,transform .12s}
 .promo-btn:hover{box-shadow:0 6px 18px rgba(0,0,0,.2);transform:translateY(-1px)}
-.user{display:flex;align-items:center;gap:10px;padding:14px 20px 0;border-top:1px solid var(--border);margin-top:8px}
-.avatar{width:36px;height:36px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700}
-.user-name{font-size:13px;font-weight:700;flex:1}
+.user{display:flex;align-items:center;justify-content:flex-end;padding:14px 20px 0;border-top:1px solid var(--border);margin-top:8px}
 .logout{font-size:13px;font-weight:600;color:var(--danger);cursor:pointer;transition:opacity .15s}
 .logout:hover{opacity:.7}
 
@@ -623,8 +621,6 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
     <button class="promo-btn" onclick="promptStart()">НАЧАТЬ МАТЧ</button>
   </div>
   <div class="user">
-    <div class="avatar" id="sidebarAvatar">A</div>
-    <span class="user-name" id="sidebarUserName">Загрузка...</span>
     <span class="logout" onclick="openM('mLogout')">Выйти</span>
   </div>
 </aside>
@@ -4151,19 +4147,7 @@ function confirmDeletePlayer() {
   deletingPlayerId = null;
 }
 
-async function loadUser() {
-  try {
-    const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + getToken() } });
-    if (res.ok) {
-      const data = await res.json();
-      const user = data.user;
-      const name = user.name || user.email.split('@')[0];
-      document.getElementById('sidebarUserName').textContent = name;
-      document.getElementById('sidebarAvatar').textContent = (user.name || user.email)[0].toUpperCase();
-    }
-  } catch(e) { document.getElementById('sidebarUserName').textContent = 'Пользователь'; }
-}
-loadUser();
+
 
 </script>
 </body>

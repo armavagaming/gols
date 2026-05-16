@@ -204,10 +204,6 @@ body{font-family:'Manrope',sans-serif;background:#f0f2f8;color:#1a1a2e;min-heigh
     </div>
     <div class="topbar-right">
       <span class="sub-badge trial" id="subBadge">Пробный</span>
-      <div class="user-badge" onclick="switchPage('profile',document.querySelector('.app-nav a:last-child'))">
-        <div class="avatar" id="userAvatar">A</div>
-        <span id="userName" style="font-size:13px;font-weight:600">User</span>
-      </div>
       <button class="profile-btn danger" onclick="logout()" style="padding:6px 12px;font-size:12px">Выйти</button>
     </div>
   </div>
@@ -525,9 +521,7 @@ function showApp() {
 function updateProfile() {
   if (!USER) return;
   const initial = (USER.name || USER.email)[0].toUpperCase();
-  document.getElementById('userAvatar').textContent = initial;
   document.getElementById('profAvatar').textContent = initial;
-  document.getElementById('userName').textContent = USER.name || USER.email.split('@')[0];
   document.getElementById('profName').textContent = USER.name || 'Пользователь';
   document.getElementById('profEmail').textContent = USER.email;
 
