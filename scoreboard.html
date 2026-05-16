@@ -369,6 +369,7 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
 .gteam-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:.3px}
 .gbar-score{background:var(--grad);padding:14px 22px;font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:3px;color:#fff;min-width:110px;text-align:center;flex-shrink:0}
 .gbar-time{background:rgba(255,255,255,.07);padding:14px 16px;font-family:'Bebas Neue',sans-serif;font-size:28px;color:#aaa;letter-spacing:1px;flex-shrink:0;display:flex;align-items:center}
+.gbar-period{background:rgba(255,255,255,.05);padding:14px 12px;font-family:'Manrope',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:.3px;flex-shrink:0;display:flex;align-items:center;white-space:nowrap}
 .gevent{
   position:absolute;top:-38px;left:50%;transform:translateX(-50%);
   background:var(--grad);color:#fff;padding:5px 18px;border-radius:20px;
@@ -968,19 +969,11 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
     </div>
     <div class="te-field">
       <label class="te-label">Тип шаблона</label>
-      <select class="te-input" id="teTemplateType" style="padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;font-weight:600;outline:none;cursor:pointer">
-        <option value="football11">⚽ Футбол 11 на 11</option>
-        <option value="football8">⚽ Футбол 8+1</option>
-        <option value="football5">⚽ Мини-футбол</option>
-        <option value="futsal">🏐 Футзал</option>
-        <option value="beach">🏖 Пляжный футбол</option>
-        <option value="hockey">🏒 Хоккей</option>
-        <option value="basketball">🏀 Баскетбол</option>
-        <option value="volleyball">🏐 Волейбол</option>
+      <select class="te-input" id="teTemplateType" onchange="updatePeriodLabel()" style="padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;font-weight:600;outline:none;cursor:pointer">
       </select>
     </div>
     <div class="te-field">
-      <label class="te-label">Количество таймов</label>
+      <label class="te-label">Количество <span id="tePeriodLabel">таймов</span></label>
       <input class="te-input" id="teTemplatePeriods" type="number" value="2" min="1" max="10">
     </div>
     <div class="te-field">
@@ -1271,6 +1264,18 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
         </div>
       </div>
 
+      <!-- Period control -->
+      <div class="block-card">
+        <div class="extra-row" style="gap:8px">
+          <span class="el" id="periodLabel">Тайм</span>
+          <button class="adj-btn" onclick="periodChange(-1)" title="Предыдущий">◀</button>
+          <span class="adj-val" id="periodNum">1</span>
+          <button class="adj-btn" onclick="periodChange(1)" title="Следующий">▶</button>
+          <span class="el" id="periodTotal">/ 2</span>
+          <span class="sh-link" onclick="periodReset()">Сброс</span>
+        </div>
+      </div>
+
       <!-- Score -->
       <div class="section-title">Счет</div>
       <div class="block-card">
@@ -1386,6 +1391,7 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
       <div class="gbar-score" id="gScore">0:0</div>
       <div class="gbar-team"><span class="gteam-name" id="gAway">—</span></div>
       <div class="gbar-time" id="gTime">00:00</div>
+      <div class="gbar-period" id="gPeriod"></div>
       <div class="gbar-extra" id="gExtra"></div>
     </div>
   </div>
@@ -1435,6 +1441,12 @@ let sponsors = JSON.parse(localStorage.getItem('sb_sponsors') || '[]');
 let curMatch=null,delId=null,selPlayer=null;
 let timerSecs=0,timerRunning=false,timerInterval=null,timerReverse=false;
 let aMin=0,aSec=0,extraT=0,events=[];
+let currentPeriod=1;
+
+const periodLabels = {football11:'тайм',football8:'тайм',football7:'тайм',football5:'тайм',futsal:'тайм',beach:'партия',hockey:'период',basketball:'четверть',volleyball:'сет'};
+const periodLabelsPlural = {football11:'таймов',football8:'таймов',football7:'таймов',football5:'таймов',futsal:'таймов',beach:'партий',hockey:'периодов',basketball:'четвертей',volleyball:'сетов'};
+const typeIcons = {football11:'⚽',football8:'⚽',football7:'⚽',football5:'⚽',futsal:'⚽',beach:'🏖',hockey:'🏒',basketball:'🏀',volleyball:'🏐'};
+const typeLabels = {football11:'Футбол большой',football8:'Футбол 8+1',football7:'Футбол 7+1',football5:'Мини-футбол',futsal:'Футзал',beach:'Пляжный футбол',hockey:'Хоккей',basketball:'Баскетбол',volleyball:'Волейбол'};
 
 /* ── TABLE ── */
 function renderTable(){
@@ -1458,7 +1470,7 @@ function openBroadcast(id){
   if(!curMatch)return;
   // reset state
   timerSecs=0;timerRunning=false;clearInterval(timerInterval);
-  timerReverse=false;aMin=0;aSec=0;extraT=0;events=[];selPlayer=null;
+  timerReverse=false;aMin=0;aSec=0;extraT=0;events=[];selPlayer=null;currentPeriod=1;
   
   // Применяем настройки шаблона если есть
   if (curMatch.template) {
@@ -1478,7 +1490,10 @@ function openBroadcast(id){
   penState = { active: false, series: 1, home: [], away: [] };
   penUpdateWidget();
   document.getElementById('cbRev').checked=false;
-  document.getElementById('cbHide').checked=false;
+  // Auto-hide timer for sports without game clock (volleyball)
+  const isNoTimer = curMatch.template && curMatch.template.type === 'volleyball';
+  document.getElementById('cbHide').checked = isNoTimer;
+  if (isNoTimer) toggleHideTimer(true);
   // fill
   document.getElementById('bcTitle').textContent=curMatch.name;
   document.getElementById('homeN').textContent=curMatch.hF;
@@ -1506,6 +1521,7 @@ function openBroadcast(id){
   renderEventLog();
   resetPC();
   hideGraphic();
+  updatePeriodDisplay();
   document.getElementById('broadcastScreen').classList.add('open');
   initSponsorChannel();
   // Push state to OBS immediately after a short delay
@@ -1553,6 +1569,30 @@ function updateTimer(){
   document.getElementById('tMin').textContent=pad(m);
   document.getElementById('tSec').textContent=pad(s);
   document.getElementById('gTime').textContent=`${pad(m)}:${pad(s)}`;
+}
+function updatePeriodDisplay() {
+  const type = curMatch && curMatch.template ? curMatch.template.type : 'football11';
+  const total = curMatch && curMatch.template ? curMatch.template.periods : 2;
+  const label = periodLabels[type] || 'тайм';
+  document.getElementById('periodLabel').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+  document.getElementById('periodNum').textContent = currentPeriod;
+  document.getElementById('periodTotal').textContent = '/ ' + total;
+  const gPeriod = document.getElementById('gPeriod');
+  if (gPeriod) gPeriod.textContent = currentPeriod + ' ' + label;
+}
+function periodChange(d) {
+  const total = curMatch && curMatch.template ? curMatch.template.periods : 2;
+  currentPeriod = Math.max(1, Math.min(total, currentPeriod + d));
+  updatePeriodDisplay();
+}
+function periodReset() {
+  currentPeriod = 1;
+  timerStop();
+  timerSecs = 0;
+  aMin = 0; aSec = 0;
+  updateTimer();
+  updateAdjUI();
+  updatePeriodDisplay();
 }
 function timerStart(){
   if(timerRunning)return;
@@ -2613,6 +2653,7 @@ function showGraphic(type, teamName){
 function hideGraphic(){
   clearTimeout(gTimeout);
   _extraVisible = false;
+  window._lastBadge = '';
   const gEx = document.getElementById('gExtra');
   if(gEx) gEx.classList.remove('vis');
   document.getElementById('bGraphic').classList.remove('vis');
@@ -2672,9 +2713,6 @@ function populateTemplateSelect() {
   const sel = document.getElementById('cmTemplate');
   if (!sel) return;
   
-  const typeIcons = {football11:'⚽',football8:'⚽',football5:'⚽',futsal:'🏐',beach:'🏖',hockey:'🏒',basketball:'🏀',volleyball:'🏐'};
-  const typeLabels = {football11:'Футбол 11 на 11',football8:'Футбол 8+1',football5:'Мини-футбол',futsal:'Футзал',beach:'Пляжный футбол',hockey:'Хоккей',basketball:'Баскетбол',volleyball:'Волейбол'};
-  
   let options = '<option value="">— Без шаблона —</option>';
   
   // Добавляем шаблоны из storage
@@ -2685,14 +2723,9 @@ function populateTemplateSelect() {
   
   // Добавляем стандартные виды спорта если нет шаблонов
   if (templates.length === 0) {
-    options += '<option value="football11">⚽ Футбол 11 на 11</option>';
-    options += '<option value="football8">⚽ Футбол 8+1</option>';
-    options += '<option value="football5">⚽ Мини-футбол</option>';
-    options += '<option value="futsal">🏐 Футзал</option>';
-    options += '<option value="beach">🏖 Пляжный футбол</option>';
-    options += '<option value="hockey">🏒 Хоккей</option>';
-    options += '<option value="basketball">🏀 Баскетбол</option>';
-    options += '<option value="volleyball">🏐 Волейбол</option>';
+    Object.keys(typeIcons).forEach(k => {
+      options += `<option value="${k}">${typeIcons[k]} ${typeLabels[k]}</option>`;
+    });
   }
   
   sel.innerHTML = options;
@@ -2711,36 +2744,47 @@ function selectTemplate() {
   
   // Ищем шаблон или вид спорта
   const tpl = templates.find(t => t.id === val);
-  const typeIcons = {football11:'⚽',football8:'⚽',football5:'⚽',futsal:'🏐',beach:'🏖',hockey:'🏒',basketball:'🏀',volleyball:'🏐'};
-  const typeLabels = {football11:'Футбол 11 на 11',football8:'Футбол 8+1',football5:'Мини-футбол',futsal:'Футзал',beach:'Пляжный футбол',hockey:'Хоккей',basketball:'Баскетбол',volleyball:'Волейбол'};
   
   if (tpl) {
     // Это шаблон из storage
     currentTemplate = tpl;
+    const pl = periodLabels[tpl.type] || 'тайм';
+    const plPlural = periodLabelsPlural[tpl.type] || (pl + 'ов');
+    let infoText = `${plPlural.charAt(0).toUpperCase()+plPlural.slice(1)}: ${tpl.periods} × ${tpl.duration}`;
+    if (tpl.type === 'volleyball') infoText += ' очков (5-й сет до 15)';
+    else infoText += ' мин';
+    if (tpl.extra > 0 && tpl.type !== 'volleyball') infoText += ` · ${(tpl.type === 'basketball' || tpl.type === 'hockey') ? 'Овертайм' : 'Доп. время'}: ${tpl.extra} мин`;
+    if (tpl.type === 'volleyball') infoText += ' · без таймера';
     desc.innerHTML = `
       <strong>${typeIcons[tpl.type]||'📋'} ${typeLabels[tpl.type]||tpl.type}</strong><br>
-      Таймов: ${tpl.periods} × ${tpl.duration} мин<br>
-      Доп. время: ${tpl.extra} мин
+      ${infoText}
     `;
     info.style.display = 'block';
   } else if (typeLabels[val]) {
     // Это стандартный вид спорта
     const defaults = {
       football11: {periods:2,duration:45,extra:15},
-      football8: {periods:2,duration:25,extra:10},
-      football5: {periods:2,duration:15,extra:5},
+      football8: {periods:2,duration:35,extra:10},
+      football7: {periods:2,duration:25,extra:10},
+      football5: {periods:2,duration:25,extra:5},
       futsal: {periods:2,duration:20,extra:5},
       beach: {periods:3,duration:12,extra:3},
-      hockey: {periods:3,duration:20,extra:10},
+      hockey: {periods:3,duration:20,extra:5},
       basketball: {periods:4,duration:10,extra:5},
-      volleyball: {periods:5,duration:25,extra:5}
+      volleyball: {periods:5,duration:25,extra:0}
     };
     const def = defaults[val] || {periods:2,duration:15,extra:5};
     currentTemplate = {type:val, ...def, name: typeLabels[val]};
+    const pl = periodLabels[val] || 'тайм';
+    const plPlural = periodLabelsPlural[val] || (pl + 'ов');
+    let unit = (val === 'volleyball') ? 'очков' : 'мин';
+    let infoText = `${plPlural.charAt(0).toUpperCase()+plPlural.slice(1)}: ${def.periods} × ${def.duration} ${unit}`;
+    if (val === 'volleyball') infoText += ' (5-й сет до 15) · без таймера';
+    else if ((val === 'basketball' || val === 'hockey') && def.extra > 0) infoText += ` · Овертайм: ${def.extra} мин`;
+    else if (def.extra > 0) infoText += ` · Доп. время: ${def.extra} мин`;
     desc.innerHTML = `
       <strong>${typeIcons[val]} ${typeLabels[val]}</strong><br>
-      Таймов: ${def.periods} × ${def.duration} мин<br>
-      Доп. время: ${def.extra} мин
+      ${infoText}
     `;
     info.style.display = 'block';
   }
@@ -2834,9 +2878,6 @@ function createAndLaunchMatch() {
   });
 
   // Create match object - используем шаблон если выбран
-  const typeIcons = {football11:'⚽',football8:'⚽',football5:'⚽',futsal:'🏐',beach:'🏖',hockey:'🏒',basketball:'🏀',volleyball:'🏐'};
-  const typeLabels = {football11:'Футбол 11 на 11',football8:'Футбол 8+1',football5:'Мини-футбол',futsal:'Футзал',beach:'Пляжный футбол',hockey:'Хоккей',basketball:'Баскетбол',volleyball:'Волейбол'};
-  
   const sport = currentTemplate ? (typeLabels[currentTemplate.type] || currentTemplate.name) : 'Футбол';
   const periods = currentTemplate ? currentTemplate.periods : 2;
   const duration = currentTemplate ? currentTemplate.duration : 45;
@@ -2853,7 +2894,8 @@ function createAndLaunchMatch() {
       type: currentTemplate.type,
       periods: periods,
       duration: duration,
-      extra: extra
+      extra: extra,
+      timeout: currentTemplate.timeout || 5
     } : null,
     date: new Date().toLocaleDateString('ru') + ' ' + new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}),
     active: true, sH: 0, sA: 0,
@@ -3802,13 +3844,11 @@ function renderTemplatesGrid() {
     grid.innerHTML = '<div style="color:var(--muted);font-size:14px;padding:20px 0;grid-column:1/-1">Шаблонов пока нет. Создайте первый!</div>';
     return;
   }
-  const typeIcons = {football11:'⚽',football8:'⚽',football5:'⚽',futsal:'🏐',beach:'🏖',hockey:'🏒',basketball:'🏀',volleyball:'🏐'};
-  const typeLabels = {football11:'Футбол 11 на 11',football8:'Футбол 8+1',football5:'Мини-футбол',futsal:'Футзал',beach:'Пляжный футбол',hockey:'Хоккей',basketball:'Баскетбол',volleyball:'Волейбол'};
    grid.innerHTML = templates.map(t => `
      <div class="team-card">
        <div class="tc-logo">${typeIcons[t.type]||'📋'}</div>
        <div class="tc-name">${t.name}</div>
-       <div class="tc-city">${typeLabels[t.type]||t.type} · ${t.periods} тайм(а) по ${t.duration} мин · Таймаут ${t.timeout || 5} мин</div>
+       <div class="tc-city">${typeLabels[t.type]||t.type} · ${t.periods} ${periodLabelsPlural[t.type]||'тайм(а)'} ${t.type==='volleyball'?'по '+t.duration+' очков (5-й до 15)':'по '+t.duration+' мин'} · ${t.type==='volleyball'?'без таймера':'Таймаут '+(t.timeout||5)+' мин'}</div>
        <div class="tc-actions">
          <button class="tc-edit-btn" onclick="openTemplateEditor('${t.id}')">✏️ Редактировать</button>
          <button class="tc-del-btn" onclick="deleteTemplate('${t.id}')">🗑️</button>
@@ -3819,12 +3859,15 @@ function renderTemplatesGrid() {
 
 function openTemplateEditor(id) {
   editingTemplateId = id;
+  // Populate type select
+  const typeSel = document.getElementById('teTemplateType');
+  typeSel.innerHTML = Object.keys(typeIcons).map(k => `<option value="${k}">${typeIcons[k]} ${typeLabels[k]}</option>`).join('');
   if (id) {
     const t = templates.find(x=>x.id===id);
     if (!t) return;
     document.getElementById('templateEditorTitle').textContent = 'Редактировать шаблон';
     document.getElementById('teTemplateName').value = t.name || '';
-    document.getElementById('teTemplateType').value = t.type || 'football';
+    document.getElementById('teTemplateType').value = t.type || 'football11';
     document.getElementById('teTemplatePeriods').value = t.periods || 2;
     document.getElementById('teTemplateDuration').value = t.duration || 15;
     document.getElementById('teTemplateExtra').value = t.extra || 5;
@@ -3832,13 +3875,20 @@ function openTemplateEditor(id) {
   } else {
     document.getElementById('templateEditorTitle').textContent = 'Новый шаблон';
     document.getElementById('teTemplateName').value = '';
-    document.getElementById('teTemplateType').value = 'football';
+    document.getElementById('teTemplateType').value = 'football11';
     document.getElementById('teTemplatePeriods').value = 2;
     document.getElementById('teTemplateDuration').value = 15;
     document.getElementById('teTemplateExtra').value = 5;
     document.getElementById('teTemplateTimeout').value = 5;
   }
+  updatePeriodLabel();
   openM('templateEditorModal');
+}
+
+function updatePeriodLabel() {
+  const type = document.getElementById('teTemplateType').value;
+  const label = document.getElementById('tePeriodLabel');
+  label.textContent = periodLabelsPlural[type] || 'таймов';
 }
 
 function saveTemplate() {
