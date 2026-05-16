@@ -622,8 +622,8 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
     <button class="promo-btn" onclick="promptStart()">НАЧАТЬ МАТЧ</button>
   </div>
   <div class="user">
-    <div class="avatar">A</div>
-    <span class="user-name">artem.anik...</span>
+    <div class="avatar" id="sidebarAvatar">A</div>
+    <span class="user-name" id="sidebarUserName">Загрузка...</span>
     <span class="logout" onclick="openM('mLogout')">Выйти</span>
   </div>
 </aside>
@@ -802,11 +802,11 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
     <div style="display:flex;gap:14px">
       <div class="te-field" style="flex:1">
         <label class="te-label">Год рождения</label>
-        <input class="te-input" id="playerBirthInput" type="number" placeholder="2000" min="1950" max="2030">
+        <input class="te-input" id="playerBirthInput" type="number" placeholder="2000" min="1960" max="2026">
       </div>
       <div class="te-field" style="flex:1">
         <label class="te-label">Номер</label>
-        <input class="te-input" id="playerNumberInput" type="number" placeholder="10" min="0" max="99">
+        <input class="te-input" id="playerNumberInput" type="number" placeholder="10" min="1" max="99">
       </div>
     </div>
     <div class="modal-footer">
@@ -1088,7 +1088,7 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
 <!-- START MODAL -->
 <!-- CREATE MATCH MODAL -->
 <div class="modal-overlay" id="mStart">
-  <div class="modal" style="max-width:620px;width:95vw">
+  <div class="modal" style="max-width:620px;width:95vw;max-height:85vh;overflow-y:auto">
     <h2>⚽ Создать матч</h2>
 
     <!-- Match name -->
@@ -1411,17 +1411,6 @@ td{padding:14px 20px;vertical-align:middle;white-space:nowrap}
 <!-- INFO GRAPHIC OVERLAY (stats/squad/single panels) -->
 <div id="infoGraphic">
   <div id="infoGraphicInner"></div>
-</div>
-
-
-<!-- GOAL ANIMATION OVERLAY -->
-<div id="goalAnim">
-  <div class="goal-anim-bg"></div>
-  <div class="goal-anim-particles" id="goalParticles"></div>
-  <div class="goal-anim-text">
-    <div class="goal-anim-big">⚽ ГОЛ!</div>
-    <div class="goal-anim-sub" id="goalAnimSub"></div>
-  </div>
 </div>
 
 <!-- SPONSOR TICKER -->
@@ -3175,7 +3164,6 @@ showGraphic = function(type, teamName) {
   window._lastBadge = labels[type] || '';
   window.pushWidgetState();
   if (type === 'goal') {
-    triggerGoalAnimation(teamName || (curMatch ? curMatch.hF : ''));
     setTimeout(() => { window._lastBadge = ''; if(curMatch) window.pushWidgetState(); }, 6000);
   }
 };
@@ -3755,48 +3743,6 @@ function removeSponsor(i) {
   sendSponsors();
 }
 
-/* ══════════════════════════════════════════
-   GOAL ANIMATION
-══════════════════════════════════════════ */
-let goalAnimTimeout = null;
-
-function triggerGoalAnimation(scorer) {
-  const el  = document.getElementById('goalAnim');
-  const sub = document.getElementById('goalAnimSub');
-  const par = document.getElementById('goalParticles');
-  if (!el) return;
-
-  // Set scorer text
-  if (sub) sub.textContent = scorer || '';
-
-  // Confetti particles
-  if (par) {
-    par.innerHTML = '';
-    const colors = ['#fbbf24','#f59e0b','#ef4444','#a855f7','#6c3ee8','#22c55e','#fff'];
-    for (let i = 0; i < 80; i++) {
-      const div = document.createElement('div');
-      div.className = 'confetti-piece';
-      div.style.cssText = `
-        left:${Math.random()*100}%;
-        top:-10px;
-        background:${colors[Math.floor(Math.random()*colors.length)]};
-        width:${6+Math.random()*10}px;
-        height:${6+Math.random()*10}px;
-        border-radius:${Math.random()>.5?'50%':'2px'};
-        animation-duration:${1.5+Math.random()*2}s;
-        animation-delay:${Math.random()*.5}s;
-      `;
-      par.appendChild(div);
-    }
-  }
-
-  el.classList.add('show');
-  clearTimeout(goalAnimTimeout);
-  goalAnimTimeout = setTimeout(() => { el.classList.remove('show'); }, 4000);
-}
-
-
-
 // Patch changeScore to pass scorer name
 const _origChangeScore = changeScore;
 changeScore = function(t, d) {
@@ -4029,6 +3975,7 @@ function openPlayerEditor(id) {
   editingPlayerId = id;
   const p = id ? players.find(x => x.id === id) : null;
   if (id && !p) return;
+  document.getElementById('playerBirthInput').max = new Date().getFullYear();
   if (p) {
     document.getElementById('playerEditorTitle').textContent = 'Редактировать игрока';
     document.getElementById('playerNameInput').value = p.name || '';
@@ -4088,12 +4035,16 @@ function removePlayerPhoto() {
 async function savePlayer() {
   const name = document.getElementById('playerNameInput').value.trim();
   if (!name) { toast('Введите имя игрока'); return; }
+  const number = parseInt(document.getElementById('playerNumberInput').value) || 0;
+  const birthYear = parseInt(document.getElementById('playerBirthInput').value) || 0;
+  if (number < 1 || number > 99) { toast('Номер должен быть от 1 до 99'); return; }
+  if (birthYear < 1960 || birthYear > new Date().getFullYear()) { toast('Год рождения должен быть от 1960 до ' + new Date().getFullYear()); return; }
   const body = {
     name,
     team_id: document.getElementById('playerTeamInput').value,
     position: document.getElementById('playerPositionInput').value,
-    birth_year: parseInt(document.getElementById('playerBirthInput').value) || 0,
-    number: parseInt(document.getElementById('playerNumberInput').value) || 0,
+    birth_year: birthYear,
+    number: number,
     photo_path: ''
   };
   // Upload photo if new
@@ -4149,6 +4100,20 @@ function confirmDeletePlayer() {
   document.getElementById('playerDeleteModal').classList.remove('open');
   deletingPlayerId = null;
 }
+
+async function loadUser() {
+  try {
+    const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+    if (res.ok) {
+      const data = await res.json();
+      const user = data.user;
+      const name = user.name || user.email.split('@')[0];
+      document.getElementById('sidebarUserName').textContent = name;
+      document.getElementById('sidebarAvatar').textContent = (user.name || user.email)[0].toUpperCase();
+    }
+  } catch(e) { document.getElementById('sidebarUserName').textContent = 'Пользователь'; }
+}
+loadUser();
 
 </script>
 </body>

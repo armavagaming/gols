@@ -117,7 +117,7 @@ try {
         json_success(array('success' => true));
     }
 
-    // ── Forgot Password ──
+    // ── Check Email ──
     elseif ($uri === '/api/auth/check-email' && $method === 'POST') {
         $body = get_body();
         $email = trim(b($body, 'email'));

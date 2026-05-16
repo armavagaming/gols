@@ -206,7 +206,7 @@ body{font-family:'Manrope',sans-serif;background:#f0f2f8;color:#1a1a2e;min-heigh
       <span class="sub-badge trial" id="subBadge">Пробный</span>
       <div class="user-badge" onclick="switchPage('profile',document.querySelector('.app-nav a:last-child'))">
         <div class="avatar" id="userAvatar">A</div>
-        <span id="userName">User</span>
+        <span id="userName" style="font-size:13px;font-weight:600">User</span>
       </div>
       <button class="profile-btn danger" onclick="logout()" style="padding:6px 12px;font-size:12px">Выйти</button>
     </div>
@@ -701,8 +701,11 @@ function switchPage(page, el) {
   document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1)).classList.add('active');
   document.querySelectorAll('.app-nav a').forEach(a => a.classList.remove('active'));
   if (el) el.classList.add('active');
-  const frame = document.getElementById('scoreboardFrame');
-  if (page === 'dashboard' && frame && !frame.src) frame.src = '/scoreboard.html';
+  if (page === 'dashboard') {
+    const frame = document.getElementById('scoreboardFrame');
+    if (frame) frame.src = '/scoreboard.html';
+  }
+  if (page === 'plans') loadPlans();
 }
 
 // ── Notify ──
